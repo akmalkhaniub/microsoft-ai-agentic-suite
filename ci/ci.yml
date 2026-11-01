@@ -1,0 +1,29 @@
+name: Microsoft AI & Agentic Architecture Suite CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  sdd-verify-and-eval-gates:
+    name: SDD Contract, Pytest & 4-Gate Eval Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python 3.12
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Traceable Pytest Suite (REQ-ARCH-01 to REQ-EVAL-01)
+        run: pytest -v
+
+      - name: Execute 4-Gate Agentic Evaluation & Regression Gate
+        run: python -m src.evals.runner

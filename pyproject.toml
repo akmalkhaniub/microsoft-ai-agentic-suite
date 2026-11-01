@@ -1,0 +1,27 @@
+[project]
+name = "microsoft-ai-agentic-suite"
+version = "1.0.0"
+description = "Enterprise Microsoft AI & Agentic Solution Architecture Suite: Copilot Studio + Microsoft Foundry Hybrid Orchestration, Zero-Trust ACL-Trimmed Azure AI Search & Fabric RAG, and Dynamics 365 / Service Bus Multi-Agent ERP Hub"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Akmal Khan, PhD", email = "akmal@vurke-architect-showcase.io" }
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
