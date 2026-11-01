@@ -133,7 +133,7 @@ class DataverseAuditRecord(BaseModel):
 # ============================================================================
 
 class ArchitectureRoutingEvaluation(BaseModel):
-    """Answers Vurke Screening Question #2: Copilot Studio vs. Microsoft Foundry decision matrix."""
+    """Enterprise Architecture Decision Matrix: Copilot Studio vs. Microsoft Foundry."""
     selected_pattern: OrchestrationPattern
     copilot_studio_fit_score: int = Field(..., ge=0, le=100)
     foundry_pro_code_fit_score: int = Field(..., ge=0, le=100)

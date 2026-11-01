@@ -1,7 +1,7 @@
 # Solution Architecture Document (SAD) & Architecture Decision Records (ADRs)
 
 **Project:** Microsoft AI & Agentic Solution Architecture Suite (`microsoft-ai-agentic-suite`)  
-**Target Role:** Senior Microsoft AI & Agentic Solution Architect (Vurke Delivery Network — North America, UK & Europe)  
+**Target Role:** Principal / Senior Microsoft AI & Agentic Solution Architect (Global Enterprise Delivery — North America, UK & Europe)  
 **Certifications Aligned:** Microsoft Certified: Agentic AI Business Solutions Architect Expert (`AB-100`), `AI-102`, `PL-600`
 
 ---
@@ -65,9 +65,9 @@ flowchart TB
 
 ---
 
-## 2. Architecture Decision Records (Directly Answering Vurke's 5 Screening Questions)
+## 2. Architecture Decision Records & Enterprise Architect Q&A
 
-### ADR-01 (Screening Question #1): End-to-End Microsoft AI Solution from Discovery to Production
+### ADR-01 (Question 1): Describe a Microsoft AI solution you architected from discovery through production
 * **Context:** Enterprise aerospace/manufacturing clients suffer SLA penalties averaging `$18,000+` per disrupted shipment because human planners manually cross-reference SharePoint contracts, Fabric inventory tables, and Dynamics 365 transfer orders across disconnected teams.
 * **Discovery & Workshop Approach:**
   1. **Value Stream & Persona Mapping (Week 1):** Quantified baseline Mean-Time-To-Resolution (`MTTR = 14.5 hours`) and established regulatory boundaries (UK GDPR + EU Data Boundary in `Germany West Central` / `UK South`).
@@ -76,7 +76,7 @@ flowchart TB
 
 ---
 
-### ADR-02 (Screening Question #2): Decision Matrix — Copilot Studio vs. Microsoft Foundry vs. Hybrid
+### ADR-02 (Question 2): How do you decide between Copilot Studio and a custom agent solution built in Microsoft Foundry?
 
 | Evaluation Dimension | Option A: Pure Copilot Studio (Low-Code) | Option B: Pure Microsoft Foundry (Pro-Code) | **Option C: Hybrid Copilot Studio + Foundry via APIM OBO (Recommended)** |
 | :--- | :--- | :--- | :--- |
@@ -89,7 +89,7 @@ flowchart TB
 
 ---
 
-### ADR-03 (Screening Question #3): Enterprise RAG with Strict Zero-Trust Security Boundaries
+### ADR-03 (Question 3): Explain your preferred architecture for enterprise RAG with strict security boundaries
 * **Problem:** Standard vector RAG pipelines retrieve top-$k$ chunks purely by cosine similarity. In an enterprise with M&A board documents, HR records, and department financials, an unprivileged employee could retrieve `Project Titan M&A Valuation ($420M)` via semantic similarity.
 * **Architectural Solution (`REQ-RAG-01` & `REQ-RAG-02`):**
   1. **Ingestion & ACL Synchronization:** SharePoint Online and Microsoft Fabric OneLake ingestion pipelines extract **Entra ID Security Group Object IDs** (`acl_groups`) and **Microsoft Purview Sensitivity Labels** (`PUBLIC`, `INTERNAL`, `CONFIDENTIAL`, `HIGHLY_CONFIDENTIAL_MA`) into every **Azure AI Search** chunk document.
@@ -101,7 +101,7 @@ flowchart TB
 
 ---
 
-### ADR-04 (Screening Question #4): Human Approval, Auditability & Guardrails in Agentic Workflows
+### ADR-04 (Question 4): How do you design human approval, auditability and guardrails into agentic workflows?
 * **Defense-in-Depth Guardrail Architecture (`REQ-HARN-01` & `REQ-HITL-01`):**
   1. **Layer 1 — Azure AI Content Safety Prompt Shields:** Every user prompt and uploaded vendor PDF excerpt is scanned for Direct User Prompt Injection (UPIA) and Indirect Cross-Domain Document Prompt Injection (XPIA) *before* reaching any agent tool.
   2. **Layer 2 — Tool Sensitivity Gating (`LIVE_SPEND` Lock):** The [`EnterpriseAgentHarness`](file:///g:/ReplitProjects/microsoft-ai-agentic-suite/src/core/harness.py) blocks any `LIVE_SPEND` tool (`sap_d365_issue_live_purchase_order`) at runtime unless a verified HMAC-SHA256 **Entra ID Approval Signature** (`entra-sig-v1.*`) is passed—even if the LLM is hallucinating or compromised.
@@ -109,7 +109,7 @@ flowchart TB
 
 ---
 
-### ADR-05 (Screening Question #5): Major Architecture Trade-Off — Cost, Performance & Security
+### ADR-05 (Question 5): Describe a major architecture trade-off you made on cost, performance, security or delivery speed
 * **The Trade-Off Dilemma:**
   1. *Live Microsoft Graph API Permission Check per Search Result* vs. *Pre-Indexed ACL Security Groups in Azure AI Search*.
      - **Choice:** **Pre-Indexed ACLs + Delta Sync Webhook**. Calling Graph API live for 50 candidate chunks adds `420ms–800ms` p95 latency and risks Graph throttling (`HTTP 429`). Pre-indexing Entra Group OIDs in Azure AI Search keeps pre-retrieval OData filtering under `12ms`.

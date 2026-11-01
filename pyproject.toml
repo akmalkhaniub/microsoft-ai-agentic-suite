@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "Akmal Khan, PhD", email = "akmal@vurke-architect-showcase.io" }
+    { name = "Akmal Khan, PhD", email = "akmalkhaniub@gmail.com" }
 ]
 dependencies = [
     "fastapi>=0.115.0",
