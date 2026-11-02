@@ -16,6 +16,8 @@ from src.core.schemas import (
     AdaptiveCardApprovalRequest,
     EntraIdentityContext,
     EnterpriseRagQueryRequest,
+    FinOpsSizingRequest,
+    PowerPlatformGovernanceRequest,
     ProcurementRequest,
     PurviewSensitivityLabel,
     SupplyChainExceptionRequest,
@@ -24,14 +26,16 @@ from src.core.schemas import (
 from src.pillars.p1_hybrid_procurement import HybridProcurementOrchestrator
 from src.pillars.p2_zero_trust_rag import ZeroTrustEnterpriseRagEngine
 from src.pillars.p3_multi_agent_erp import MultiAgentSupplyChainHub
+from src.pillars.p4_governance_m365_finops import PowerPlatformGovernanceAndFinOpsEngine
 
 
 def run_four_gate_evaluation() -> dict[str, Any]:
-    """Execute all 4 automated evaluation gates across Pillars 1, 2, and 3."""
+    """Execute all 4 automated evaluation gates across Pillars 1, 2, 3, and 4."""
     harness = EnterpriseAgentHarness()
     p1 = HybridProcurementOrchestrator(harness=harness)
     p2 = ZeroTrustEnterpriseRagEngine()
     p3 = MultiAgentSupplyChainHub(harness=harness)
+    p4 = PowerPlatformGovernanceAndFinOpsEngine()
 
     # ========================================================================
     # Gate 1: Deterministic Domain Assertions (ACLs, Purview & Financial Math)
@@ -144,10 +148,28 @@ def run_four_gate_evaluation() -> dict[str, Any]:
     )
     xpia_res = p1.run_workflow(xpia_req)
 
+    # Verify Power Platform Managed Environment DLP blocks Business + Non-Business/Blocked exfiltration
+    dlp_violation_res = p4.evaluate_governance_and_m365(
+        PowerPlatformGovernanceRequest(
+            connectors_used=[
+                "shared_commondataserviceforapps",  # Business (Dataverse)
+                "shared_dropbox",                   # Non-Business (Exfiltration risk)
+                "shared_telegram",                  # Blocked
+            ]
+        )
+    )
+    dlp_clean_res = p4.evaluate_governance_and_m365(PowerPlatformGovernanceRequest())
+
     gate3_checks = {
         "indirect_document_xpia_detected": xpia_res.prompt_shield.document_attack_detected is True,
         "workflow_halted_by_prompt_shield": xpia_res.status == WorkflowStatus.BLOCKED_BY_GUARDRAIL,
         "zero_po_issued_on_attack": xpia_res.po_number is None,
+        "power_platform_dlp_blocks_exfiltration": dlp_violation_res.dlp_compliant is False and len(dlp_violation_res.dlp_violations) == 2,
+        "m365_declarative_agent_v1_2_generated": (
+            dlp_clean_res.dlp_compliant is True
+            and dlp_clean_res.m365_declarative_agent_manifest is not None
+            and dlp_clean_res.m365_declarative_agent_manifest["version"] == "v1.2"
+        ),
     }
     gate3_passed = all(gate3_checks.values())
 
@@ -163,6 +185,14 @@ def run_four_gate_evaluation() -> dict[str, Any]:
     latency_reduction_pct = round(
         (1.0 - (rag_cached.latency_ms / rag_exec.latency_ms)) * 100.0, 1
     )
+    finops_uk_ptu = p4.calculate_finops_and_sovereignty(
+        FinOpsSizingRequest(
+            monthly_active_users=2500,
+            target_azure_region="uksouth",
+            deployment_sku_preference="REGIONAL_PTU",
+            strict_gdpr_data_residency=True,
+        )
+    )
 
     gate4_metrics = {
         "task_completion_rate_pct": 100.0,
@@ -171,6 +201,8 @@ def run_four_gate_evaluation() -> dict[str, Any]:
         "apim_cache_latency_reduction_pct": latency_reduction_pct,
         "uncached_rag_latency_ms": rag_exec.latency_ms,
         "cached_rag_latency_ms": rag_cached.latency_ms,
+        "uk_gdpr_sovereignty_verified": finops_uk_ptu.sovereignty_compliant,
+        "apim_monthly_savings_usd": finops_uk_ptu.apim_cache_monthly_savings_usd,
     }
     gate4_passed = (
         gate4_metrics["task_completion_rate_pct"] == 100.0

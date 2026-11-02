@@ -14,7 +14,9 @@ from src.core.schemas import (
     AdaptiveCardApprovalRequest,
     EntraIdentityContext,
     EnterpriseRagQueryRequest,
+    FinOpsSizingRequest,
     OrchestrationPattern,
+    PowerPlatformGovernanceRequest,
     ProcurementRequest,
     PurviewSensitivityLabel,
     SupplyChainExceptionRequest,
@@ -25,6 +27,7 @@ from src.evals.runner import run_four_gate_evaluation
 from src.pillars.p1_hybrid_procurement import HybridProcurementOrchestrator
 from src.pillars.p2_zero_trust_rag import ZeroTrustEnterpriseRagEngine
 from src.pillars.p3_multi_agent_erp import MultiAgentSupplyChainHub
+from src.pillars.p4_governance_m365_finops import PowerPlatformGovernanceAndFinOpsEngine
 
 
 @pytest.fixture()
@@ -281,7 +284,80 @@ def test_req_int_01_service_bus_retry_and_dlq(board_exec_identity: EntraIdentity
 
 
 # ============================================================================
-# 4. Cross-Cutting 4-Gate Evaluation & FastAPI Endpoint Tests (REQ-EVAL-01)
+# 4. Pillar 4 Tests: REQ-GOV-01, REQ-M365-01, REQ-FIN-02
+# ============================================================================
+
+def test_req_gov_01_power_platform_dlp_and_alm() -> None:
+    """Verify Power Platform Managed Environment DLP policy enforcement and Dataverse solution.xml ALM."""
+    engine = PowerPlatformGovernanceAndFinOpsEngine()
+
+    # 1. Compliant Business-only connector set
+    clean_res = engine.evaluate_governance_and_m365(PowerPlatformGovernanceRequest())
+    assert clean_res.dlp_compliant is True
+    assert clean_res.is_managed_solution is True
+    assert "<Managed>1</Managed>" in clean_res.alm_solution_xml_preview
+    assert len(clean_res.dlp_violations) == 0
+
+    # 2. Exfiltration attempt mixing Dataverse (Business) with Dropbox (Non-Business) & Telegram (Blocked)
+    violation_res = engine.evaluate_governance_and_m365(
+        PowerPlatformGovernanceRequest(
+            connectors_used=[
+                "shared_commondataserviceforapps",
+                "shared_dropbox",
+                "shared_telegram",
+            ]
+        )
+    )
+    assert violation_res.dlp_compliant is False
+    assert len(violation_res.dlp_violations) == 2
+
+
+def test_req_m365_01_declarative_agent_manifest() -> None:
+    """Verify Microsoft 365 Copilot Declarative Agent v1.2 & EntraOnBehalfOf API Plugin manifests."""
+    engine = PowerPlatformGovernanceAndFinOpsEngine()
+    res = engine.evaluate_governance_and_m365(
+        PowerPlatformGovernanceRequest(enable_m365_copilot_declarative_agent=True)
+    )
+    assert res.m365_declarative_agent_manifest is not None
+    assert res.m365_declarative_agent_manifest["version"] == "v1.2"
+    assert res.m365_api_plugin_manifest is not None
+    assert res.m365_api_plugin_manifest["runtimes"][0]["auth"]["type"] == "EntraOnBehalfOf"
+
+
+def test_req_fin_02_ptu_vs_payg_and_sovereignty() -> None:
+    """Verify Azure FinOps PTU vs. PAYG crossover math and UK/EU GDPR data residency enforcement."""
+    engine = PowerPlatformGovernanceAndFinOpsEngine()
+
+    # 1. High-scale enterprise workload -> recommends PTU
+    high_scale = engine.calculate_finops_and_sovereignty(
+        FinOpsSizingRequest(
+            monthly_active_users=8000,
+            avg_conversations_per_user_per_month=25,
+            target_azure_region="uksouth",
+            deployment_sku_preference="REGIONAL_PTU",
+            strict_gdpr_data_residency=True,
+        )
+    )
+    assert high_scale.recommended_foundry_billing_model == "PROVISIONED_THROUGHPUT_PTU"
+    assert high_scale.sovereignty_compliant is True
+    assert high_scale.apim_cache_monthly_savings_usd > 0
+
+    # 2. Global Standard selected under strict GDPR -> triggers sovereignty violation
+    gdpr_violation = engine.calculate_finops_and_sovereignty(
+        FinOpsSizingRequest(
+            monthly_active_users=500,
+            target_azure_region="germanywestcentral",
+            deployment_sku_preference="GLOBAL_STANDARD",
+            strict_gdpr_data_residency=True,
+        )
+    )
+    assert gdpr_violation.sovereignty_compliant is False
+    assert gdpr_violation.sovereignty_violation_warning is not None
+    assert "SOVEREIGNTY_VIOLATION" in gdpr_violation.sovereignty_violation_warning
+
+
+# ============================================================================
+# 5. Cross-Cutting 4-Gate Evaluation & FastAPI Endpoint Tests (REQ-EVAL-01)
 # ============================================================================
 
 def test_req_eval_01_four_gate_evaluation_pass() -> None:

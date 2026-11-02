@@ -316,3 +316,89 @@ class SupplyChainResolutionResponse(BaseModel):
     service_bus_envelope: ServiceBusEnvelope
     customer_communication_draft: str
     otel_spans: list[OTelGenAISpan] = Field(default_factory=list)
+
+
+# ============================================================================
+# 6. Pillar 4: Power Platform DLP/ALM, M365 Copilot Extensibility & FinOps PTU
+# ============================================================================
+
+class ConnectorDataGroup(str, Enum):
+    """Power Platform Managed Environment DLP connector classification (`REQ-GOV-01`)."""
+    BUSINESS = "Business"
+    NON_BUSINESS = "Non-Business"
+    BLOCKED = "Blocked"
+
+
+class PowerPlatformGovernanceRequest(BaseModel):
+    """Input request for evaluating Power Platform DLP policies and generating ALM Solution manifests."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    solution_unique_name: str = Field(default="ContosoEnterpriseProcurementCopilot")
+    solution_version: str = Field(default="1.4.0.0")
+    target_environment_tier: Literal["DEV", "TEST_UAT", "PROD_MANAGED"] = "PROD_MANAGED"
+    connectors_used: list[str] = Field(
+        default_factory=lambda: [
+            "shared_commondataserviceforapps",  # Microsoft Dataverse
+            "shared_sharepointonline",          # SharePoint Online
+            "shared_teams",                     # Microsoft Teams
+            "shared_azuread",                   # Microsoft Entra ID
+            "shared_apim_foundry_custom",       # Approved APIM Foundry Connector
+        ]
+    )
+    enable_m365_copilot_declarative_agent: bool = True
+
+
+class ConnectorClassificationDetail(BaseModel):
+    """DLP classification status for a single Power Platform connector."""
+    connector_id: str
+    display_name: str
+    dlp_group: ConnectorDataGroup
+
+
+class PowerPlatformGovernanceResponse(BaseModel):
+    """Output response for Power Platform DLP evaluation, ALM solution packager, and M365 Copilot manifest."""
+    solution_unique_name: str
+    is_managed_solution: bool
+    dlp_compliant: bool
+    connector_classifications: list[ConnectorClassificationDetail]
+    dlp_violations: list[str] = Field(default_factory=list)
+    alm_solution_xml_preview: str
+    alm_environment_variables: dict[str, str]
+    m365_declarative_agent_manifest: dict[str, Any] | None = None
+    m365_api_plugin_manifest: dict[str, Any] | None = None
+
+
+class FinOpsSizingRequest(BaseModel):
+    """Input parameters for the Azure FinOps, PTU vs. PAYG & Sovereignty Calculator (`REQ-FIN-02`)."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    monthly_active_users: int = Field(default=2500, gt=0)
+    avg_conversations_per_user_per_month: int = Field(default=18, gt=0)
+    avg_turns_per_conversation: int = Field(default=4, gt=0)
+    avg_input_tokens_per_turn: int = Field(default=1400, gt=0)
+    avg_output_tokens_per_turn: int = Field(default=350, gt=0)
+    apim_semantic_cache_hit_ratio: float = Field(default=0.42, ge=0.0, le=0.95)
+    target_azure_region: Literal["uksouth", "germanywestcentral", "eastus2", "swedencentral"] = "uksouth"
+    deployment_sku_preference: Literal["GLOBAL_STANDARD", "DATA_ZONE_STANDARD", "REGIONAL_PTU"] = "REGIONAL_PTU"
+    strict_gdpr_data_residency: bool = True
+
+
+class FinOpsSizingResponse(BaseModel):
+    """Deterministic FinOps & Sovereignty calculation output (`REQ-FIN-02`)."""
+    total_monthly_turns: int
+    gross_monthly_input_tokens: int
+    gross_monthly_output_tokens: int
+    net_billable_tokens_after_apim_cache: int
+    peak_tokens_per_minute_tpm: int
+    copilot_studio_message_packs_required: int
+    copilot_studio_monthly_cost_usd: float
+    foundry_payg_monthly_cost_usd: float
+    foundry_ptu_recommended_units: int
+    foundry_ptu_monthly_cost_usd: float
+    apim_cache_monthly_savings_usd: float
+    recommended_foundry_billing_model: Literal["PAY_AS_YOU_GO", "PROVISIONED_THROUGHPUT_PTU"]
+    ptu_vs_payg_crossover_rationale: str
+    sovereignty_compliant: bool
+    sovereignty_violation_warning: str | None = None
+    regional_architecture_summary: str
+

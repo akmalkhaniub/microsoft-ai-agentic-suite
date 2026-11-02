@@ -21,6 +21,10 @@ from src.core.schemas import (
     AdaptiveCardApprovalRequest,
     EnterpriseRagQueryRequest,
     EnterpriseRagQueryResponse,
+    FinOpsSizingRequest,
+    FinOpsSizingResponse,
+    PowerPlatformGovernanceRequest,
+    PowerPlatformGovernanceResponse,
     ProcurementRequest,
     ProcurementWorkflowResponse,
     SupplyChainExceptionRequest,
@@ -31,18 +35,20 @@ from src.evals.runner import run_four_gate_evaluation
 from src.pillars.p1_hybrid_procurement import HybridProcurementOrchestrator
 from src.pillars.p2_zero_trust_rag import ZeroTrustEnterpriseRagEngine
 from src.pillars.p3_multi_agent_erp import MultiAgentSupplyChainHub
+from src.pillars.p4_governance_m365_finops import PowerPlatformGovernanceAndFinOpsEngine
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialize shared Enterprise Agent Harness and 3 Pillar Engines."""
+    """Initialize shared Enterprise Agent Harness and 4 Pillar Engines."""
     harness = EnterpriseAgentHarness()
     app.state.harness = harness
     app.state.pillar1 = HybridProcurementOrchestrator(harness=harness)
     app.state.pillar2 = ZeroTrustEnterpriseRagEngine()
     app.state.pillar3 = MultiAgentSupplyChainHub(harness=harness)
+    app.state.pillar4 = PowerPlatformGovernanceAndFinOpsEngine()
     yield
 
 
@@ -144,6 +150,32 @@ async def resolve_supply_chain_exception(
     """Execute 4-agent Microsoft Foundry supervisor workflow with Service Bus retry & DLQ handling."""
     p3: MultiAgentSupplyChainHub = app.state.pillar3
     return p3.resolve_exception(req)
+
+
+# ============================================================================
+# Pillar 4 Endpoints: Power Platform DLP/ALM, M365 Copilot & FinOps PTU Sizing
+# ============================================================================
+
+@app.post("/api/v1/pillar4/governance/evaluate", response_model=PowerPlatformGovernanceResponse)
+async def evaluate_power_platform_governance(
+    req: PowerPlatformGovernanceRequest,
+    response: Response,
+) -> PowerPlatformGovernanceResponse:
+    """Evaluate Managed Environment DLP policies, generate ALM solution.xml & M365 Copilot v1.2 manifest."""
+    p4: PowerPlatformGovernanceAndFinOpsEngine = app.state.pillar4
+    res = p4.evaluate_governance_and_m365(req)
+    if not res.dlp_compliant:
+        response.status_code = status.HTTP_403_FORBIDDEN
+    return res
+
+
+@app.post("/api/v1/pillar4/finops/estimate", response_model=FinOpsSizingResponse)
+async def calculate_finops_and_sovereignty(
+    req: FinOpsSizingRequest,
+) -> FinOpsSizingResponse:
+    """Calculate Copilot Studio packs, Azure OpenAI PTU vs. PAYG crossover, and GDPR sovereignty."""
+    p4: PowerPlatformGovernanceAndFinOpsEngine = app.state.pillar4
+    return p4.calculate_finops_and_sovereignty(req)
 
 
 # ============================================================================

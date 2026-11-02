@@ -67,8 +67,11 @@
       <button onclick="switchTab('p3')" id="tab-p3" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-t-lg transition-all">
         3. Multi-Agent ERP & Service Bus Hub
       </button>
+      <button onclick="switchTab('p4')" id="tab-p4" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-t-lg transition-all">
+        4. Power Platform DLP, M365 Copilot & FinOps PTU
+      </button>
       <button onclick="switchTab('evals')" id="tab-evals" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-t-lg transition-all">
-        4. SDD 4-Gate Verification & ADRs
+        5. SDD 4-Gate Verification & ADRs
       </button>
     </div>
   </header>
@@ -242,7 +245,69 @@
     </section>
 
     <!-- ================================================================== -->
-    <!-- PANEL 4: 4-GATE EVALUATION SUITE & SCREENING QUESTION ADRs         -->
+    <!-- PILLAR 4: POWER PLATFORM DLP, M365 COPILOT & FINOPS PTU SIZING     -->
+    <!-- ================================================================== -->
+    <section id="panel-p4" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-4">
+          <!-- Governance & M365 Card -->
+          <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Power Platform Managed DLP & M365 Copilot</h2>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono">REQ-GOV-01 • REQ-M365-01</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="executePillar4Governance(false)" class="px-3 py-2 text-xs rounded-lg border border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500 text-left">
+                <div class="font-semibold text-emerald-600 dark:text-emerald-400">Compliant Business Set</div>
+                <div class="text-[11px] text-slate-500">Dataverse + SharePoint + APIM</div>
+              </button>
+              <button onclick="executePillar4Governance(true)" class="px-3 py-2 text-xs rounded-lg border border-rose-500/30 bg-rose-500/5 hover:border-rose-500 text-left">
+                <div class="font-semibold text-rose-600 dark:text-rose-400">Simulate DLP Exfiltration</div>
+                <div class="text-[11px] text-slate-500">Dataverse + Dropbox + Telegram</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- FinOps PTU vs PAYG & Sovereignty Card -->
+          <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold">Azure FinOps PTU vs. PAYG & Sovereignty</h2>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono">REQ-FIN-02</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium mb-1">Monthly Active Users</label>
+                <input id="p4Users" type="number" value="4500" class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium mb-1">Target Azure Region</label>
+                <select id="p4Region" class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+                  <option value="uksouth">UK South (London — UK GDPR)</option>
+                  <option value="germanywestcentral">Germany West Central (EU Boundary)</option>
+                  <option value="swedencentral">Sweden Central (EU Green AI Hub)</option>
+                  <option value="eastus2">US East 2 (North America)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium mb-1">Deployment SKU & Data Residency Mode</label>
+              <select id="p4Sku" class="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <option value="REGIONAL_PTU">Regional PTU / DataZone Standard (Strict In-Region Sovereignty)</option>
+                <option value="GLOBAL_STANDARD">Global Standard (Cross-Geo Routing → Triggers GDPR Alert)</option>
+              </select>
+            </div>
+            <button onclick="executePillar4FinOps()" class="w-full py-2 px-4 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs shadow-sm transition-all">
+              Calculate FinOps PTU Crossover & Sovereignty Compliance
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-4" id="p4ResultContainer"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- PANEL 5: 4-GATE EVALUATION SUITE & SCREENING QUESTION ADRs         -->
     <!-- ================================================================== -->
     <section id="panel-evals" class="hidden space-y-6">
       <div id="evalReportContainer"></div>
@@ -266,7 +331,7 @@
 
     // Tab Navigation
     function switchTab(tab) {
-      ['p1', 'p2', 'p3', 'evals'].forEach(id => {
+      ['p1', 'p2', 'p3', 'p4', 'evals'].forEach(id => {
         document.getElementById(`panel-${id}`).classList.toggle('hidden', id !== tab);
         const btn = document.getElementById(`tab-${id}`);
         if (id === tab) {
@@ -670,11 +735,118 @@
       `;
     }
 
+    let lastGovData = null;
+    let lastFinOpsData = null;
+
+    async function executePillar4Governance(simulateViolation = false) {
+      const connectors = simulateViolation
+        ? ["shared_commondataserviceforapps", "shared_dropbox", "shared_telegram"]
+        : ["shared_commondataserviceforapps", "shared_sharepointonline", "shared_teams", "shared_azuread", "shared_apim_foundry_custom"];
+      const res = await fetch('/api/v1/pillar4/governance/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solution_unique_name: "ContosoEnterpriseProcurementCopilot",
+          solution_version: "1.4.0.0",
+          target_environment_tier: "PROD_MANAGED",
+          connectors_used: connectors,
+          enable_m365_copilot_declarative_agent: true
+        })
+      });
+      lastGovData = await res.json();
+      renderP4Combined();
+    }
+
+    async function executePillar4FinOps() {
+      const users = parseInt(document.getElementById('p4Users').value || '4500', 10);
+      const region = document.getElementById('p4Region').value;
+      const sku = document.getElementById('p4Sku').value;
+      const res = await fetch('/api/v1/pillar4/finops/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthly_active_users: users,
+          target_azure_region: region,
+          deployment_sku_preference: sku,
+          strict_gdpr_data_residency: true
+        })
+      });
+      lastFinOpsData = await res.json();
+      renderP4Combined();
+    }
+
+    function renderP4Combined() {
+      if (!lastGovData || !lastFinOpsData) return;
+      const dlpBadge = lastGovData.dlp_compliant
+        ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-500">✓ DLP COMPLIANT (Managed Solution Ready)</span>'
+        : '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-500">🛡️ BLOCKED BY POWER PLATFORM DLP POLICY</span>';
+
+      const sovBadge = lastFinOpsData.sovereignty_compliant
+        ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-500">✓ GDPR SOVEREIGNTY VERIFIED</span>'
+        : '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-500">⚠️ CROSS-GEO DATA RESIDENCY VIOLATION</span>';
+
+      const violationsHtml = lastGovData.dlp_violations.map(v => `<div class="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 dark:text-rose-300 font-mono">${v}</div>`).join('');
+
+      document.getElementById('p4ResultContainer').innerHTML = `
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <div class="text-xs text-slate-500 font-mono">Solution: ${lastGovData.solution_unique_name}</div>
+              <h3 class="text-base font-semibold">Power Platform Managed Environment DLP & M365 Copilot Package</h3>
+            </div>
+            ${dlpBadge}
+          </div>
+          ${violationsHtml}
+          <details class="group border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+            <summary class="px-4 py-2.5 bg-slate-50 dark:bg-slate-900 text-xs font-medium cursor-pointer flex justify-between items-center">
+              <span>▶ Inspect M365 Copilot Declarative Agent Manifest (v1.2), API Plugin & Dataverse solution.xml</span>
+              <span class="text-slate-400 group-open:rotate-90 transition-transform">›</span>
+            </summary>
+            <div class="p-4 bg-white dark:bg-slate-950 text-xs font-mono overflow-x-auto">
+              <pre class="text-[11px] text-slate-700 dark:text-slate-300">${JSON.stringify({ m365_declarative_agent: lastGovData.m365_declarative_agent_manifest, m365_api_plugin: lastGovData.m365_api_plugin_manifest, alm_environment_variables: lastGovData.alm_environment_variables }, null, 2)}</pre>
+            </div>
+          </details>
+        </div>
+
+        <div class="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <div class="text-xs text-slate-500 font-mono">${lastFinOpsData.regional_architecture_summary}</div>
+              <h3 class="text-base font-semibold">Azure FinOps Sizing: Recommended ${lastFinOpsData.recommended_foundry_billing_model}</h3>
+            </div>
+            ${sovBadge}
+          </div>
+          ${lastFinOpsData.sovereignty_violation_warning ? `<div class="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 text-xs text-rose-600 dark:text-rose-300 font-mono">${lastFinOpsData.sovereignty_violation_warning}</div>` : ''}
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div class="text-xs text-slate-500">Copilot Studio Packs</div>
+              <div class="text-sm font-semibold mt-1">$${lastFinOpsData.copilot_studio_monthly_cost_usd.toLocaleString()}/mo (${lastFinOpsData.copilot_studio_message_packs_required} packs)</div>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div class="text-xs text-slate-500">Foundry Net PAYG</div>
+              <div class="text-sm font-semibold mt-1">$${lastFinOpsData.foundry_payg_monthly_cost_usd.toLocaleString()}/mo</div>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div class="text-xs text-slate-500">Foundry PTU (${lastFinOpsData.foundry_ptu_recommended_units} PTUs)</div>
+              <div class="text-sm font-semibold mt-1">$${lastFinOpsData.foundry_ptu_monthly_cost_usd.toLocaleString()}/mo</div>
+            </div>
+            <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+              <div class="text-xs text-emerald-600 dark:text-emerald-400">APIM Cache Savings</div>
+              <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">$${lastFinOpsData.apim_cache_monthly_savings_usd.toLocaleString()}/mo</div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${lastFinOpsData.ptu_vs_payg_crossover_rationale}</p>
+        </div>
+      `;
+    }
+
     // Initialize default views on page load
     window.addEventListener('DOMContentLoaded', () => {
       executePillar1();
       executePillar2();
       executePillar3();
+      executePillar4Governance(false);
+      executePillar4FinOps();
     });
   </script>
 </body>

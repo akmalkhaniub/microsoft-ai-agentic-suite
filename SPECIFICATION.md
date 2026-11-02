@@ -19,12 +19,16 @@
    - All user inputs and untrusted external documents (e.g., uploaded vendor PDFs) **MUST** pass through **Azure AI Content Safety Prompt Shields** (User Prompt Attack + Indirect Document Attack detection) before any tool invocation.
 5. **INV-05 (Resilient Enterprise Integration & Observability)**:
    - Every mutating tool invocation must use a deterministic **SHA-256 Idempotency Key** (`sha256(tenant_id:workflow_id:tool_name:canonical_args)`), retry transient `503 Service Unavailable` / `429 Too Many Requests` errors via exponential backoff, route unrecoverable payloads to an **Azure Service Bus Dead-Letter Queue (DLQ)**, and emit **OpenTelemetry GenAI (`gen_ai.*`)** spans to **Azure Monitor / Application Insights**.
+6. **INV-06 (Power Platform Managed Environment DLP & Zero-Exfiltration Governance)**:
+   - Any Copilot Studio agent or Power Automate flow combining a `Business` data connector (`Dataverse`, `SharePoint`, `Dynamics365`, `AzureAISearch`) with a `Non-Business` or `Blocked` connector (`CustomUnauthenticatedHttp`, `PersonalDropbox`, `Telegram`) **MUST** be blocked at design/deployment time by the Power Platform DLP Policy Evaluator before ALM solution export.
+7. **INV-07 (Sovereign Data Residency & FinOps PTU Economics)**:
+   - Production workloads operating under **UK GDPR (`uksouth`)** or **EU Data Boundary (`germanywestcentral`)** must disallow cross-geo `Global Standard` endpoints when `strict_data_residency=True` and deterministically calculate the exact token-throughput crossover threshold between **Azure OpenAI Pay-As-You-Go (PAYG)** and **Provisioned Throughput Units (PTU)**.
 
 ---
 
 ## 2. Requirement Identifiers (`REQ-XX`)
 
-| Requirement ID | Pillar / Module | Capability Specification | Screening Question Alignment |
+| Requirement ID | Pillar / Module | Capability Specification | Architect Assessment Alignment |
 | :--- | :--- | :--- | :--- |
 | **`REQ-ARCH-01`** | Pillar 1: Hybrid Copilot + Foundry | Deterministic architectural router & scoring engine evaluating complexity, connectors, governance, licensing (`$200/25k messages` vs. Foundry PTU/PAYG), and OBO identity propagation. | **Q2:** Copilot Studio vs. Microsoft Foundry decision matrix |
 | **`REQ-HARN-01`** | Pillar 1: Agent Harness & Safety | Tool sensitivity classification (`READ_ONLY`, `DRAFT_MUTATION`, `LIVE_SPEND`), Azure AI Content Safety Prompt Shields (direct + indirect XPIA), and SHA-256 idempotency. | **Q4:** Human approval, auditability & guardrails |
@@ -34,7 +38,10 @@
 | **`REQ-FIN-01`** | Pillar 2: APIM Semantic Cache & FinOps | Azure API Management (APIM) semantic vector cache (`similarity >= 0.92`) with tenant security-scope isolation (`tenant_id + acl_signature`) reducing token cost and p95 latency. | **Q5:** Cost, performance, security & delivery trade-offs |
 | **`REQ-ERP-01`** | Pillar 3: Multi-Agent Supply Chain Hub | Microsoft Foundry Supervisor + specialized sub-agents (`TriageAgent`, `FabricInventoryAgent`, `PolicyComplianceAgent`, `Dynamics365ErpAgent`) resolving order exceptions end-to-end. | **Q1:** End-to-end Microsoft AI solution from discovery to prod |
 | **`REQ-INT-01`** | Pillar 3: Service Bus & Self-Healing | Asynchronous **Azure Service Bus** envelope dispatch, automatic exponential backoff on `503` ERP/Logic App faults, Dead-Letter Queue (DLQ) fallback, and **OpenTelemetry GenAI** tracing. | **Q1 & Q4:** Production resilience, observability & escalation |
-| **`REQ-EVAL-01`** | Cross-Cutting Verification | 4-Gate Automated Evaluation Suite (Gate 1: Deterministic Domain Math/ACLs, Gate 2: Trajectory & Fault Recovery, Gate 3: Prompt Shield & Guardrails, Gate 4: Regression Scorecard). | **All:** Demonstrated production quality & assessment readiness |
+| **`REQ-GOV-01`** | Pillar 4: Power Platform DLP & ALM | Managed Environment DLP connector classification (`Business` vs. `Non-Business` vs. `Blocked`), cross-boundary data exfiltration blocker, and Dataverse Managed Solution (`solution.xml`) ALM generator. | **Preferred:** Advanced Power Platform governance & ALM |
+| **`REQ-M365-01`** | Pillar 4: M365 Copilot Extensibility | Schema-valid **Microsoft 365 Copilot Declarative Agent (`v1.2`)**, API Plugin (`ai-plugin.json`), OpenAPI 3.1 spec, and `EntraOnBehalfOf` SSO manifest generator. | **Preferred:** Microsoft 365 Copilot & declarative agents |
+| **`REQ-FIN-02`** | Pillar 4: FinOps PTU vs. PAYG & Residency | Interactive **Azure FinOps & Sovereignty Calculator** computing Copilot Studio vs. Foundry costs, **PTU vs. Pay-As-You-Go** crossover math, and UK/EU/US data residency compliance. | **Core:** Cost, latency, scale & data residency selection |
+| **`REQ-EVAL-01`** | Cross-Cutting Verification | 4-Gate Automated Evaluation Suite (Gate 1: Deterministic Domain Math/ACLs, Gate 2: Trajectory & Fault Recovery, Gate 3: Prompt Shield & DLP Guardrails, Gate 4: Regression Scorecard). | **All:** Demonstrated production quality & assessment readiness |
 
 ---
 
@@ -50,4 +57,7 @@
 | `REQ-FIN-01` | `src/pillars/p2_zero_trust_rag.py` | `tests/test_suite.py::test_req_fin_01_apim_semantic_cache_acl_isolated` |
 | `REQ-ERP-01` | `src/pillars/p3_multi_agent_erp.py` | `tests/test_suite.py::test_req_erp_01_multi_agent_exception_resolution` |
 | `REQ-INT-01` | `src/pillars/p3_multi_agent_erp.py` | `tests/test_suite.py::test_req_int_01_service_bus_retry_and_dlq` |
+| `REQ-GOV-01` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_gov_01_power_platform_dlp_and_alm` |
+| `REQ-M365-01` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_m365_01_declarative_agent_manifest` |
+| `REQ-FIN-02` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_fin_02_ptu_vs_payg_and_sovereignty` |
 | `REQ-EVAL-01` | `src/evals/runner.py` | `tests/test_suite.py::test_req_eval_01_four_gate_evaluation_pass` |
