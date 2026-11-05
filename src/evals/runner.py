@@ -17,6 +17,12 @@ from src.core.schemas import (
     EntraIdentityContext,
     EnterpriseRagQueryRequest,
     FinOpsSizingRequest,
+    HumanFeedbackDistillationRequest,
+    KqlQueryRequest,
+    KqlQueryType,
+    McpJsonRpcRequest,
+    MemoryCategory,
+    MemoryRecallRequest,
     PowerPlatformGovernanceRequest,
     ProcurementRequest,
     PurviewSensitivityLabel,
@@ -27,6 +33,10 @@ from src.pillars.p1_hybrid_procurement import HybridProcurementOrchestrator
 from src.pillars.p2_zero_trust_rag import ZeroTrustEnterpriseRagEngine
 from src.pillars.p3_multi_agent_erp import MultiAgentSupplyChainHub
 from src.pillars.p4_governance_m365_finops import PowerPlatformGovernanceAndFinOpsEngine
+from src.pillars.p5_agent_memory import memory_hub
+from src.pillars.p6_observability_kql import kql_studio
+from src.pillars.p7_security_redteam import red_team_engine
+from src.pillars.p8_mcp_server import mcp_server
 
 
 def run_four_gate_evaluation() -> dict[str, Any]:
@@ -76,11 +86,35 @@ def run_four_gate_evaluation() -> dict[str, Any]:
     standard_chunk_ids = {c.chunk_id for c in rag_standard.retrieved_chunks}
     exec_chunk_ids = {c.chunk_id for c in rag_exec.retrieved_chunks}
 
+    # Verify Multi-Tier Agent Memory & Feedback Distillation (REQ-MEM-01 / INV-08)
+    mem_recall = memory_hub.recall_episodic_memory(
+        MemoryRecallRequest(
+            tenant_id="tenant-contoso-global",
+            session_id="eval-session-001",
+            query="What are the dual director procurement limits for cloud subscriptions?",
+            category=MemoryCategory.PROCUREMENT_RULE,
+            top_k=2,
+        )
+    )
+    mem_distill = memory_hub.distill_feedback(
+        HumanFeedbackDistillationRequest(
+            tenant_id="tenant-contoso-global",
+            session_id="eval-session-001",
+            user_upn=ma_board_exec.user_principal_name,
+            original_action="Auto-approve $150k purchase order for GPU server cluster",
+            human_feedback="Reject action: GPU compute orders over $100k require explicit board approval.",
+            decision="REJECTED",
+            target_category=MemoryCategory.PROCUREMENT_RULE,
+        )
+    )
+
     gate1_checks = {
         "zero_trust_ma_blocked_for_standard_user": "chk-ma-003" not in standard_chunk_ids,
         "zero_trust_ma_permitted_for_board_exec": "chk-ma-003" in exec_chunk_ids,
         "odata_filter_enforced_pre_retrieval": "search.in" in rag_standard.odata_security_filter,
         "apim_cache_isolated_by_acl_scope": rag_standard.apim_cache_scope_key != rag_exec.apim_cache_scope_key,
+        "memory_recall_found_procurement_rule": len(mem_recall.recalled_episodic_memories) > 0,
+        "feedback_distillation_saved_to_cosmos": mem_distill.saved_to_cosmos_db is True and "STRICT PROHIBITION" in mem_distill.distilled_rule,
     }
     gate1_passed = all(gate1_checks.values())
 
@@ -117,6 +151,14 @@ def run_four_gate_evaluation() -> dict[str, Any]:
     expected_agents = ["TriageAgent", "FabricInventoryAgent", "PolicyComplianceAgent", "Dynamics365ErpAgent"]
     actual_agents = [step.agent_name for step in erp_res.agent_trajectory]
 
+    # Verify Live OpenTelemetry Telemetry & Azure Log Analytics KQL Studio (REQ-OBS-01 / INV-09)
+    kql_res_costs = kql_studio.execute_kql(
+        KqlQueryRequest(query_type=KqlQueryType.TOKEN_COST_BY_DEPARTMENT)
+    )
+    kql_res_latency = kql_studio.execute_kql(
+        KqlQueryRequest(query_type=KqlQueryType.P95_LATENCY_BY_NODE)
+    )
+
     gate2_checks = {
         "po_above_10k_paused_for_hitl": po_paused.status == WorkflowStatus.AWAITING_HUMAN_APPROVAL,
         "po_resumed_with_entra_signature": (
@@ -129,6 +171,8 @@ def run_four_gate_evaluation() -> dict[str, Any]:
             erp_res.status == WorkflowStatus.COMPLETED
             and erp_res.service_bus_envelope.delivery_count == 2
         ),
+        "kql_token_cost_attribution_verified": kql_res_costs.row_count >= 5 and "TotalSpendUSD" in kql_res_costs.columns,
+        "kql_p95_latency_by_node_verified": kql_res_latency.row_count >= 4 and "P95_ms" in kql_res_latency.columns,
     }
     gate2_passed = all(gate2_checks.values())
 
@@ -160,6 +204,10 @@ def run_four_gate_evaluation() -> dict[str, Any]:
     )
     dlp_clean_res = p4.evaluate_governance_and_m365(PowerPlatformGovernanceRequest())
 
+    # Verify Automated Microsoft AI Red Team & STRIDE Threat Matrix (REQ-SEC-01 / INV-10)
+    red_team_rpt = red_team_engine.run_red_team_suite()
+    stride_matrix = red_team_engine.get_stride_threat_matrix()
+
     gate3_checks = {
         "indirect_document_xpia_detected": xpia_res.prompt_shield.document_attack_detected is True,
         "workflow_halted_by_prompt_shield": xpia_res.status == WorkflowStatus.BLOCKED_BY_GUARDRAIL,
@@ -170,11 +218,14 @@ def run_four_gate_evaluation() -> dict[str, Any]:
             and dlp_clean_res.m365_declarative_agent_manifest is not None
             and dlp_clean_res.m365_declarative_agent_manifest["version"] == "v1.2"
         ),
+        "red_team_scenarios_tested_ge_6": red_team_rpt.scenarios_tested >= 6,
+        "red_team_defense_rate_100_pct": red_team_rpt.defense_rate_percent == 100.0,
+        "stride_threat_matrix_mitigated": len(stride_matrix) == 6 and all(t.status == "MITIGATED" for t in stride_matrix),
     }
     gate3_passed = all(gate3_checks.values())
 
     # ========================================================================
-    # Gate 4: Regression & FinOps Scorecard (Baseline vs. Candidate)
+    # Gate 4: Regression & FinOps Scorecard (Baseline vs. Candidate) & MCP Wire
     # ========================================================================
     rag_cached = p2.query(
         EnterpriseRagQueryRequest(
@@ -194,6 +245,31 @@ def run_four_gate_evaluation() -> dict[str, Any]:
         )
     )
 
+    # Verify Model Context Protocol JSON-RPC 2.0 (REQ-MCP-01 / INV-11)
+    mcp_ping = mcp_server.handle_jsonrpc(McpJsonRpcRequest(id=1, method="ping"))
+    mcp_tools = mcp_server.handle_jsonrpc(McpJsonRpcRequest(id=2, method="tools/list"))
+    mcp_spend_unauth = mcp_server.handle_jsonrpc(
+        McpJsonRpcRequest(
+            id=3,
+            method="tools/call",
+            params={"name": "procurement_po_execute", "arguments": {"workflow_id": "WF-99", "po_amount_usd": 150000.0}},
+        )
+    )
+    mcp_spend_auth = mcp_server.handle_jsonrpc(
+        McpJsonRpcRequest(
+            id=4,
+            method="tools/call",
+            params={
+                "name": "procurement_po_execute",
+                "arguments": {
+                    "workflow_id": "WF-99",
+                    "po_amount_usd": 150000.0,
+                    "authorization_jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.valid-signature",
+                },
+            },
+        )
+    )
+
     gate4_metrics = {
         "task_completion_rate_pct": 100.0,
         "tool_schema_accuracy_pct": 100.0,
@@ -203,11 +279,19 @@ def run_four_gate_evaluation() -> dict[str, Any]:
         "cached_rag_latency_ms": rag_cached.latency_ms,
         "uk_gdpr_sovereignty_verified": finops_uk_ptu.sovereignty_compliant,
         "apim_monthly_savings_usd": finops_uk_ptu.apim_cache_monthly_savings_usd,
+        "mcp_ping_valid": mcp_ping.result.get("status") == "pong" if mcp_ping.result else False,
+        "mcp_tools_count": len(mcp_tools.result.get("tools", [])) if mcp_tools.result else 0,
+        "mcp_live_spend_guard_active": mcp_spend_unauth.error is not None and mcp_spend_unauth.error.get("code") == -32003,
+        "mcp_live_spend_authorized_success": mcp_spend_auth.result is not None and mcp_spend_auth.result.get("isError") is False,
     }
     gate4_passed = (
         gate4_metrics["task_completion_rate_pct"] == 100.0
         and rag_cached.apim_cache_hit is True
         and latency_reduction_pct >= 90.0
+        and gate4_metrics["mcp_ping_valid"] is True
+        and gate4_metrics["mcp_tools_count"] >= 7
+        and gate4_metrics["mcp_live_spend_guard_active"] is True
+        and gate4_metrics["mcp_live_spend_authorized_success"] is True
     )
 
     all_passed = gate1_passed and gate2_passed and gate3_passed and gate4_passed

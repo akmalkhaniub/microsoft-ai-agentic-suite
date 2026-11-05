@@ -23,6 +23,14 @@
    - Any Copilot Studio agent or Power Automate flow combining a `Business` data connector (`Dataverse`, `SharePoint`, `Dynamics365`, `AzureAISearch`) with a `Non-Business` or `Blocked` connector (`CustomUnauthenticatedHttp`, `PersonalDropbox`, `Telegram`) **MUST** be blocked at design/deployment time by the Power Platform DLP Policy Evaluator before ALM solution export.
 7. **INV-07 (Sovereign Data Residency & FinOps PTU Economics)**:
    - Production workloads operating under **UK GDPR (`uksouth`)** or **EU Data Boundary (`germanywestcentral`)** must disallow cross-geo `Global Standard` endpoints when `strict_data_residency=True` and deterministically calculate the exact token-throughput crossover threshold between **Azure OpenAI Pay-As-You-Go (PAYG)** and **Provisioned Throughput Units (PTU)**.
+8. **INV-08 (Multi-Tier Agent Memory & Episodic Tenant Isolation)**:
+   - Agent memory must maintain strict tier separation: (1) ephemeral Working Memory per session thread, (2) long-term Episodic Memory in **Azure Cosmos DB NoSQL** partitioned by `tenant_id`, and (3) Semantic Entity Grounding. Distillation of human review feedback must produce deterministic, immutable behavioral rules.
+9. **INV-09 (Full-Stack Observability & KQL Cost Attribution)**:
+   - Every graph execution, node transition, and tool call must emit structured **OpenTelemetry GenAI** (`gen_ai.*`) spans with department cost-center attribution, queryable via Azure Log Analytics Kusto Query Language (KQL) without data loss.
+10. **INV-10 (STRIDE Threat Modeling & Microsoft AI Red Team Robustness)**:
+    - Mutating agent pathways must be audited against the **OWASP Top 10 for LLMs** and **Microsoft AI Red Team** attack vectors. The system must generate formal, reproducible STRIDE threat assessments with 0% unauthenticated privilege escalation.
+11. **INV-11 (Model Context Protocol [MCP] Wire Integrity)**:
+    - Exposed agent capabilities must comply with the **Model Context Protocol (JSON-RPC 2.0)** spec, declaring tool sensitivity tiers (`READ_ONLY`, `DRAFT_MUTATION`, `LIVE_SPEND`), input/output JSON schemas, and structured error reporting.
 
 ---
 
@@ -41,7 +49,11 @@
 | **`REQ-GOV-01`** | Pillar 4: Power Platform DLP & ALM | Managed Environment DLP connector classification (`Business` vs. `Non-Business` vs. `Blocked`), cross-boundary data exfiltration blocker, and Dataverse Managed Solution (`solution.xml`) ALM generator. | **Preferred:** Advanced Power Platform governance & ALM |
 | **`REQ-M365-01`** | Pillar 4: M365 Copilot Extensibility | Schema-valid **Microsoft 365 Copilot Declarative Agent (`v1.2`)**, API Plugin (`ai-plugin.json`), OpenAPI 3.1 spec, and `EntraOnBehalfOf` SSO manifest generator. | **Preferred:** Microsoft 365 Copilot & declarative agents |
 | **`REQ-FIN-02`** | Pillar 4: FinOps PTU vs. PAYG & Residency | Interactive **Azure FinOps & Sovereignty Calculator** computing Copilot Studio vs. Foundry costs, **PTU vs. Pay-As-You-Go** crossover math, and UK/EU/US data residency compliance. | **Core:** Cost, latency, scale & data residency selection |
-| **`REQ-EVAL-01`** | Cross-Cutting Verification | 4-Gate Automated Evaluation Suite (Gate 1: Deterministic Domain Math/ACLs, Gate 2: Trajectory & Fault Recovery, Gate 3: Prompt Shield & DLP Guardrails, Gate 4: Regression Scorecard). | **All:** Demonstrated production quality & assessment readiness |
+| **`REQ-MEM-01`** | Pillar 5: Multi-Tier Agent Memory | Working, Episodic (Cosmos DB NoSQL), and Semantic Entity memory tiers with semantic similarity recall and automated feedback distillation into permanent behavioral rules. | **Core:** Agent memory, state management & continuous improvement |
+| **`REQ-OBS-01`** | Pillar 6: Observability & KQL Studio | Real-time OpenTelemetry GenAI span event stream (SSE), cost center attribution, and interactive Azure Log Analytics KQL Query Studio with production queries. | **Core:** Observability, diagnostics & FinOps tracking |
+| **`REQ-SEC-01`** | Pillar 7: AI Red Team & STRIDE Engine | Automated Microsoft AI Red Team adversarial testing (OWASP LLM01-10, XPIA, jailbreaks, tool manipulation) and formal STRIDE threat modeling report generator. | **Core:** Responsible AI, security & threat defense |
+| **`REQ-MCP-01`** | Pillar 8: Model Context Protocol Server | FastMCP / JSON-RPC 2.0 server surface with stdio & SSE transports, permission-tiered tool discovery, and schema validation. | **Preferred:** Open protocol interoperability & tool-calling |
+| **`REQ-EVAL-01`** | Cross-Cutting Verification | 4-Gate Automated Evaluation Suite extended to verify Memory recall, KQL telemetry integrity, Red Team defense, and MCP protocol compliance. | **All:** Demonstrated production quality & assessment readiness |
 
 ---
 
@@ -60,4 +72,8 @@
 | `REQ-GOV-01` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_gov_01_power_platform_dlp_and_alm` |
 | `REQ-M365-01` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_m365_01_declarative_agent_manifest` |
 | `REQ-FIN-02` | `src/pillars/p4_governance_m365_finops.py` | `tests/test_suite.py::test_req_fin_02_ptu_vs_payg_and_sovereignty` |
+| `REQ-MEM-01` | `src/pillars/p5_agent_memory.py` | `tests/test_suite.py::test_req_mem_01_multi_tier_memory_and_distillation` |
+| `REQ-OBS-01` | `src/pillars/p6_observability_kql.py` | `tests/test_suite.py::test_req_obs_01_kql_studio_and_telemetry` |
+| `REQ-SEC-01` | `src/pillars/p7_security_redteam.py` | `tests/test_suite.py::test_req_sec_01_red_team_and_stride_matrix` |
+| `REQ-MCP-01` | `src/pillars/p8_mcp_server.py` | `tests/test_suite.py::test_req_mcp_01_mcp_server_protocol_and_dispatch` |
 | `REQ-EVAL-01` | `src/evals/runner.py` | `tests/test_suite.py::test_req_eval_01_four_gate_evaluation_pass` |

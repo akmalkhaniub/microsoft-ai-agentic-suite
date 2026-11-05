@@ -402,3 +402,240 @@ class FinOpsSizingResponse(BaseModel):
     sovereignty_violation_warning: str | None = None
     regional_architecture_summary: str
 
+
+# ============================================================================
+# 7. Pillar 5: Multi-Tier Agent Memory & Cosmos DB Episodic Knowledge Store
+# ============================================================================
+
+class MemoryCategory(str, Enum):
+    """Categorization for agent episodic memory records (`REQ-MEM-01`)."""
+    PROCUREMENT_RULE = "PROCUREMENT_RULE"
+    SUPPLY_CHAIN_OVERRIDE = "SUPPLY_CHAIN_OVERRIDE"
+    SECURITY_EXCEPTION = "SECURITY_EXCEPTION"
+    USER_PREFERENCE = "USER_PREFERENCE"
+
+
+class EpisodicMemoryRecord(BaseModel):
+    """Long-term episodic memory entity persisted in Azure Cosmos DB NoSQL (`INV-08`)."""
+    memory_id: str
+    tenant_id: str = Field(..., description="Partition key in Azure Cosmos DB container")
+    session_id: str
+    user_upn: str
+    category: MemoryCategory
+    summary: str
+    embedding_vector: list[float] = Field(default_factory=list)
+    confidence_score: float = Field(default=0.95, ge=0.0, le=1.0)
+    access_count: int = Field(default=1, ge=0)
+    created_at: str = Field(default_factory=utc_now_iso)
+    last_accessed_at: str = Field(default_factory=utc_now_iso)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class MemoryRecallRequest(BaseModel):
+    """Input query to recall working and episodic memory across Cosmos DB (`REQ-MEM-01`)."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    tenant_id: str = Field(default="tenant-contoso-global")
+    session_id: str = Field(default="session-procurement-7781")
+    query: str = Field(..., min_length=3)
+    category: MemoryCategory | None = None
+    top_k: int = Field(default=3, ge=1, le=10)
+    min_confidence: float = Field(default=0.6, ge=0.0, le=1.0)
+
+
+class MemoryRecallResponse(BaseModel):
+    """Consolidated working and episodic memory returned to the agent context."""
+    tenant_id: str
+    session_id: str
+    query: str
+    working_memory_state: dict[str, Any]
+    recalled_episodic_memories: list[EpisodicMemoryRecord]
+    cosine_similarity_threshold: float
+    total_memories_found: int
+    latency_ms: float
+
+
+class HumanFeedbackDistillationRequest(BaseModel):
+    """Continuous learning request distilling human approval/rejection feedback into permanent rules."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    tenant_id: str = Field(default="tenant-contoso-global")
+    session_id: str = Field(default="session-procurement-7781")
+    user_upn: str = Field(..., min_length=5)
+    original_action: str = Field(..., min_length=5)
+    human_feedback: str = Field(..., min_length=5)
+    decision: Literal["APPROVED", "REJECTED", "MODIFIED"]
+    target_category: MemoryCategory = MemoryCategory.PROCUREMENT_RULE
+
+
+class HumanFeedbackDistillationResponse(BaseModel):
+    """Output confirming rule distillation and Cosmos DB persistence."""
+    rule_id: str
+    tenant_id: str
+    distilled_rule: str
+    target_category: MemoryCategory
+    saved_to_cosmos_db: bool
+    impact_scope: str
+    created_at: str = Field(default_factory=utc_now_iso)
+
+
+# ============================================================================
+# 8. Pillar 6: Observability, OpenTelemetry GenAI & KQL Studio
+# ============================================================================
+
+class KqlQueryType(str, Enum):
+    """Pre-canned production queries for Azure Log Analytics KQL Studio (`REQ-OBS-01`)."""
+    TOKEN_COST_BY_DEPARTMENT = "TOKEN_COST_BY_DEPARTMENT"
+    P95_LATENCY_BY_NODE = "P95_LATENCY_BY_NODE"
+    PROMPT_SHIELD_BLOCK_RATE = "PROMPT_SHIELD_BLOCK_RATE"
+    TOP_TOOL_FAILURES = "TOP_TOOL_FAILURES"
+    CUSTOM = "CUSTOM"
+
+
+class KqlQueryRequest(BaseModel):
+    """Input request to execute a KQL query against Azure Log Analytics simulation."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    query_type: KqlQueryType = KqlQueryType.TOKEN_COST_BY_DEPARTMENT
+    custom_kql: str | None = None
+    time_range: Literal["Last 1 hour", "Last 24 hours", "Last 7 days"] = "Last 24 hours"
+
+
+class DepartmentCostAttribution(BaseModel):
+    """FinOps cost and token usage aggregated per corporate department."""
+    department: str
+    total_calls: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_cost_usd: float
+    top_agent: str
+
+
+class KqlQueryResponse(BaseModel):
+    """Output results of a KQL query execution with schema-typed records."""
+    query_type: KqlQueryType
+    kql_executed: str
+    row_count: int
+    columns: list[str]
+    records: list[dict[str, Any]]
+    execution_duration_ms: float
+    visualization_type: Literal["table", "bar_chart", "time_chart", "pie_chart"]
+
+
+class LiveSpanStreamEvent(BaseModel):
+    """Individual span event published over Server-Sent Events (SSE)."""
+    span_id: str
+    trace_id: str
+    name: str
+    department: str
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    cost_usd: float
+    status_code: str
+    timestamp: str = Field(default_factory=utc_now_iso)
+
+
+# ============================================================================
+# 9. Pillar 7: Microsoft AI Red Team & STRIDE Threat Modeling Engine
+# ============================================================================
+
+class RedTeamAttackCategory(str, Enum):
+    """Adversarial attack taxonomy aligned with OWASP Top 10 for LLMs (`REQ-SEC-01`)."""
+    LLM01_PROMPT_INJECTION = "LLM01_PROMPT_INJECTION"
+    LLM02_INSECURE_OUTPUT = "LLM02_INSECURE_OUTPUT"
+    LLM07_SYSTEM_PROMPT_LEAKAGE = "LLM07_SYSTEM_PROMPT_LEAKAGE"
+    LLM08_EXCESSIVE_AGENCY = "LLM08_EXCESSIVE_AGENCY"
+    XPIA_CROSS_PROMPT_INJECTION = "XPIA_CROSS_PROMPT_INJECTION"
+    CRESCENDO_MULTI_TURN = "CRESCENDO_MULTI_TURN"
+
+
+class RedTeamAttackScenario(BaseModel):
+    """Adversarial test probe vector simulating Microsoft AI Red Team attacks (`REQ-SEC-01`)."""
+    scenario_id: str
+    attack_category: RedTeamAttackCategory
+    prompt_payload: str
+    target_pillar: str
+    description: str
+
+
+class RedTeamEvaluationResult(BaseModel):
+    """Outcome of an automated adversarial probe against agentic guardrails."""
+    scenario_id: str
+    attack_category: RedTeamAttackCategory
+    target_pillar: str
+    prompt_payload: str
+    system_response_summary: str
+    defended_successfully: bool
+    defense_layer_triggered: str
+    severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    remediation_notes: str
+
+
+class StrideThreatRecord(BaseModel):
+    """Formal STRIDE threat model row mapping attack vectors to Microsoft security controls."""
+    stride_category: Literal["Spoofing", "Tampering", "Repudiation", "Information Disclosure", "Denial of Service", "Elevation of Privilege"]
+    component: str
+    threat_description: str
+    mitigation_control: str
+    status: Literal["MITIGATED", "MONITORED", "ACCEPTED"]
+
+
+class StrideAssessmentReport(BaseModel):
+    """Comprehensive Red-Teaming and STRIDE audit report (`REQ-SEC-01`)."""
+    report_id: str
+    scenarios_tested: int
+    defenses_passed: int
+    defense_rate_percent: float
+    results: list[RedTeamEvaluationResult]
+    stride_matrix: list[StrideThreatRecord]
+    generated_at: str = Field(default_factory=utc_now_iso)
+
+
+# ============================================================================
+# 10. Pillar 8: Model Context Protocol (MCP) Server & Tool Registry
+# ============================================================================
+
+class McpToolSensitivity(str, Enum):
+    """Permission sensitivity gating for exposed Model Context Protocol tools (`REQ-MCP-01`)."""
+    READ_ONLY = "READ_ONLY"
+    DRAFT_MUTATION = "DRAFT_MUTATION"
+    LIVE_SPEND = "LIVE_SPEND"
+
+
+class McpToolDefinition(BaseModel):
+    """Specification of an MCP tool discoverable via `tools/list`."""
+    name: str
+    description: str
+    sensitivity: McpToolSensitivity
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any]
+
+
+class McpJsonRpcRequest(BaseModel):
+    """Standard Model Context Protocol JSON-RPC 2.0 message."""
+    model_config = ConfigDict(extra="ignore")
+
+    jsonrpc: Literal["2.0"] = "2.0"
+    id: str | int = 1
+    method: Literal["tools/list", "tools/call", "ping", "resources/list"]
+    params: dict[str, Any] | None = None
+
+
+class McpJsonRpcResponse(BaseModel):
+    """Standard Model Context Protocol JSON-RPC 2.0 reply."""
+    jsonrpc: Literal["2.0"] = "2.0"
+    id: str | int | None = None
+    result: Any | None = None
+    error: dict[str, Any] | None = None
+
+
+class McpServerStatus(BaseModel):
+    """Metadata and capability manifest of the MCP FastMCP server."""
+    server_name: str = "microsoft-ai-agentic-suite-mcp"
+    protocol_version: str = "2024-11-05"
+    supported_transports: list[str] = Field(default_factory=lambda: ["stdio", "sse", "http_rest"])
+    tools_count: int
+    available_tools: list[McpToolDefinition]
+
+

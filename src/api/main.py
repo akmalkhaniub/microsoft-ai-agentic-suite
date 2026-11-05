@@ -23,10 +23,23 @@ from src.core.schemas import (
     EnterpriseRagQueryResponse,
     FinOpsSizingRequest,
     FinOpsSizingResponse,
+    HumanFeedbackDistillationRequest,
+    HumanFeedbackDistillationResponse,
+    KqlQueryRequest,
+    KqlQueryResponse,
+    LiveSpanStreamEvent,
+    McpJsonRpcRequest,
+    McpJsonRpcResponse,
+    McpServerStatus,
+    MemoryRecallRequest,
+    MemoryRecallResponse,
     PowerPlatformGovernanceRequest,
     PowerPlatformGovernanceResponse,
     ProcurementRequest,
     ProcurementWorkflowResponse,
+    RedTeamEvaluationResult,
+    StrideAssessmentReport,
+    StrideThreatRecord,
     SupplyChainExceptionRequest,
     SupplyChainResolutionResponse,
     WorkflowStatus,
@@ -36,6 +49,10 @@ from src.pillars.p1_hybrid_procurement import HybridProcurementOrchestrator
 from src.pillars.p2_zero_trust_rag import ZeroTrustEnterpriseRagEngine
 from src.pillars.p3_multi_agent_erp import MultiAgentSupplyChainHub
 from src.pillars.p4_governance_m365_finops import PowerPlatformGovernanceAndFinOpsEngine
+from src.pillars.p5_agent_memory import memory_hub
+from src.pillars.p6_observability_kql import kql_studio
+from src.pillars.p7_security_redteam import red_team_engine
+from src.pillars.p8_mcp_server import mcp_server
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -83,6 +100,11 @@ async def health_check() -> dict[str, Any]:
             "Pillar 1: Copilot Studio + Microsoft Foundry Hybrid Operations Agent",
             "Pillar 2: Zero-Trust Entra ID ACL + Purview + Fabric RAG Engine",
             "Pillar 3: Multi-Agent Dynamics 365 & Azure Service Bus Hub",
+            "Pillar 4: Power Platform DLP & ALM + M365 Copilot & FinOps Sizing",
+            "Pillar 5: Multi-Tier Agent Memory & Cosmos DB Episodic Knowledge Store",
+            "Pillar 6: Live OpenTelemetry GenAI Telemetry & Azure Log Analytics KQL Studio",
+            "Pillar 7: Automated Microsoft AI Red Team & STRIDE Threat Modeling Engine",
+            "Pillar 8: Production Model Context Protocol (FastMCP / JSON-RPC 2.0) Server",
         ],
         "dataverse_audit_records_count": len(harness.dataverse_audit_table),
         "otel_spans_exported_count": len(harness.exported_otel_spans),
@@ -176,6 +198,70 @@ async def calculate_finops_and_sovereignty(
     """Calculate Copilot Studio packs, Azure OpenAI PTU vs. PAYG crossover, and GDPR sovereignty."""
     p4: PowerPlatformGovernanceAndFinOpsEngine = app.state.pillar4
     return p4.calculate_finops_and_sovereignty(req)
+
+
+# ============================================================================
+# Pillar 5 Endpoints: Multi-Tier Agent Memory & Cosmos DB Episodic Knowledge
+# ============================================================================
+
+@app.post("/api/v1/memory/recall", response_model=MemoryRecallResponse)
+async def recall_agent_memory(req: MemoryRecallRequest) -> MemoryRecallResponse:
+    """Recall working and episodic memory across Azure Cosmos DB NoSQL (`REQ-MEM-01`)."""
+    return memory_hub.recall_episodic_memory(req)
+
+
+@app.post("/api/v1/memory/distill", response_model=HumanFeedbackDistillationResponse)
+async def distill_human_feedback(req: HumanFeedbackDistillationRequest) -> HumanFeedbackDistillationResponse:
+    """Distill human approval/rejection feedback into permanent Cosmos DB governance rules (`INV-08`)."""
+    return memory_hub.distill_feedback(req)
+
+
+# ============================================================================
+# Pillar 6 Endpoints: Observability, OpenTelemetry & Azure Log Analytics KQL
+# ============================================================================
+
+@app.post("/api/v1/telemetry/kql/execute", response_model=KqlQueryResponse)
+async def execute_kql_query(req: KqlQueryRequest) -> KqlQueryResponse:
+    """Execute KQL queries against simulated Azure Log Analytics workspace (`REQ-OBS-01`)."""
+    return kql_studio.execute_kql(req)
+
+
+@app.get("/api/v1/telemetry/spans/recent", response_model=list[LiveSpanStreamEvent])
+async def get_recent_spans() -> list[LiveSpanStreamEvent]:
+    """Retrieve recent OpenTelemetry GenAI spans for streaming visualization (`INV-09`)."""
+    return kql_studio.get_recent_spans(limit=30)
+
+
+# ============================================================================
+# Pillar 7 Endpoints: Microsoft AI Red Team & STRIDE Threat Modeling
+# ============================================================================
+
+@app.post("/api/v1/security/redteam/run", response_model=StrideAssessmentReport)
+async def run_red_team_suite() -> StrideAssessmentReport:
+    """Execute full automated Microsoft AI Red Team adversarial testing battery (`REQ-SEC-01`)."""
+    return red_team_engine.run_red_team_suite()
+
+
+@app.get("/api/v1/security/stride/matrix", response_model=list[StrideThreatRecord])
+async def get_stride_threat_matrix() -> list[StrideThreatRecord]:
+    """Retrieve formal STRIDE Threat Modeling matrix mapped to Microsoft security controls (`INV-10`)."""
+    return red_team_engine.get_stride_threat_matrix()
+
+
+# ============================================================================
+# Pillar 8 Endpoints: Model Context Protocol (FastMCP / JSON-RPC 2.0)
+# ============================================================================
+
+@app.post("/api/v1/mcp/jsonrpc", response_model=McpJsonRpcResponse)
+async def handle_mcp_jsonrpc(req: McpJsonRpcRequest) -> McpJsonRpcResponse:
+    """Standard Model Context Protocol JSON-RPC 2.0 wire dispatch endpoint (`REQ-MCP-01`)."""
+    return mcp_server.handle_jsonrpc(req)
+
+
+@app.get("/api/v1/mcp/status", response_model=McpServerStatus)
+async def get_mcp_server_status() -> McpServerStatus:
+    """Retrieve MCP server capabilities, protocol version, and exposed tool definitions (`INV-11`)."""
+    return mcp_server.get_status()
 
 
 # ============================================================================
